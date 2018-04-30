@@ -22,7 +22,6 @@ void	clearConsole(void);
 void	textColour(int colour);
 
 time_t	timer; // Timer
-int		pointer = -1; // Stack pointer
 int		idCount = 0; // Tracks all-time number of callers
 int		elapsedT, elapsedH, elapsedM, elapsedS; // Used for converting seconds to HH:MM:SS format
 string	notification; // Used to display important information in the bottom right of the interface
@@ -39,7 +38,6 @@ void main(void) {
 // Push a new caller to the stack
 void push(string n) {
 	if (idV.size() != MAX_CALLERS - 1) {
-		pointer++;
 
 		idV.push_back(idCount);
 		numberV.push_back(n);
