@@ -17,14 +17,16 @@ void	pop(void);
 void	formatS(int s);
 void	mainMenu(void);
 void	drawMenu(void);
-string	generateCaller(void);
 void	setLoc(int x, int y);
-void clearConsole(void);
+void	clearConsole(void);
+void	textColour(int colour);
 
 time_t	timer; // Timer
 int		pointer = -1; // Stack pointer
 int		idCount = 0; // Tracks all-time number of callers
 int		elapsedT, elapsedH, elapsedM, elapsedS; // Used for converting seconds to HH:MM:SS format
+string	notification; // Used to display important information in the bottom right of the interface
+int		averageWait; // Used to track average wait time
 
 vector<int>		idV; // Stores caller ids
 vector<string>	numberV; // Stores phone numbers
@@ -44,16 +46,18 @@ void push(string n) {
 		timeV.push_back(time(NULL));
 
 		idCount++;
-	} else { /* Stack is full */ }
+	} else { notification = "Error: Cannot add call (Queue is full)."; }
 }
 
 // Pop the oldest caller from the stack (simulating pushing call to an operator)
 void pop(void) {
-	if (pointer != -1) {
+	if (idV.size() != 0) {
+		notification = "Removed call ID: " + to_string(idV.at(0)) + " from the queue (pushed to operator).";
+
 		idV.erase(idV.begin());
 		numberV.erase(numberV.begin());
 		timeV.erase(timeV.begin());
-	} else { /* Stack is empty */ }
+	} else { notification = "Error: Cannot remove call (Queue is empty)."; }
 }
 
 // Format seconds to HH:MM:SS
@@ -76,7 +80,9 @@ void mainMenu(void) {
 
 	switch (_getch()) {
 	case 49: // '1' is pressed - add a new call
-		push("07296 185236");
+		notification = "Added call ID: " + to_string(idCount) + " to the queue.";
+		push("00000 000000");
+		
 		mainMenu();
 		break;
 
@@ -87,18 +93,25 @@ void mainMenu(void) {
 		break;
 
 	case 51: // '3' is pressed - disconnect call (randomly disconnect a caller)
-		if (pointer != -1) {
-			int rng = rand() % idV.size() + 1;
+		if (idV.size() != 0) {
+			int rng = rand() % idV.size();
+
+			notification = "Removed call ID: "  + to_string(idV.at(rng)) +  " from the queue (disconnected).";
 
 			idV.erase(idV.begin() + rng);
 			numberV.erase(numberV.begin() + rng);
 			timeV.erase(timeV.begin() + rng);
-		} else { /* Stack is empty */ }
+		} else { notification = "Error: Cannot remove call (Queue is empty)."; }
+
+		mainMenu();
+		break;
+	case 52: // '4' is pressed - update queue
+		notification = "Updated queue.";
 
 		mainMenu();
 		break;
 
-	case 52: // '4' is pressed - quit application
+	case 53: // '5' is pressed - quit application
 		break;
 
 	default:
@@ -114,17 +127,40 @@ void drawMenu(void) {
 	// Print Queue
 	for (int i = 0; i < idV.size(); ++i) {
 		formatS(time(NULL) - timeV.at(i));
-
-		// Print
-		cout << "ID: " << idV.at(i) << " | ";
-		cout << "Number: " << numberV.at(i) << " | ";
-		cout << "Time: " << elapsedH << ":" << elapsedM << ":" << elapsedS << endl;
+		
+		textColour(10); cout << "ID: " << idV.at(i);
+		textColour(15); cout <<  " | " << "Number: " << numberV.at(i) << " | ";
+		textColour(10); cout << "Time: " << elapsedH << ":" << elapsedM << ":" << elapsedS << endl;
 	}
-}
 
-// Generate a phone number
-string generateCaller(void) {
-	return "unfinished";
+	// Print average wait time
+	textColour(10); setLoc(65, 15); cout << "Average Waiting Time: ";
+
+	if (idV.size() != 0) {
+		averageWait = 0;
+		for (int i = 0; i < idV.size(); ++i) averageWait += time(NULL) - timeV.at(i);
+		averageWait = averageWait / idV.size();
+
+		formatS(averageWait);
+		
+		textColour(15); cout << elapsedH << ":" << elapsedM << ":" << elapsedS;
+	} else { textColour(15); cout << "N/A - Queue is empty."; }
+
+	//setLoc
+
+	// Print menu options
+	textColour(11); setLoc(65, 5); cout << "Call Centre Application";
+	setLoc(65, 6); cout << "-----------------------";
+
+	textColour(14); setLoc(65, 8); cout << "[1] Add a new call to the queue";
+	textColour(14); setLoc(65, 9); cout << "[2] Push Oldest Call to Operator";
+	textColour(14); setLoc(65,10); cout << "[3] Disconnect Random Call";
+	textColour(14); setLoc(65,11); cout << "[4] Update Queue";
+	textColour(14); setLoc(65,12); cout << "[5] Quit Application";
+
+	// Print notification
+	textColour(12);
+	setLoc(0, 25); cout << notification;
 }
 
 // Set console cursor location
@@ -153,4 +189,11 @@ void clearConsole(void) {
 
 	FillConsoleOutputCharacter(hStdout, ' ', csbi.dwSize.X * csbi.dwSize.Y, startLoc, &dummy);
 	setLoc(0, 0);
+}
+
+// Used to set the text colour
+void textColour(int colour) {
+	HANDLE  hConsole;
+	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, colour);
 }
