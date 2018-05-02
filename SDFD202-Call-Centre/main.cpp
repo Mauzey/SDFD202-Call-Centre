@@ -20,12 +20,16 @@ void	drawMenu(void);
 void	setLoc(int x, int y);
 void	clearConsole(void);
 void	textColour(int colour);
+void	updateAvgCalls(void);
 
 time_t	timer; // Timer
 int		idCount = 0; // Tracks all-time number of callers
 int		elapsedT, elapsedH, elapsedM, elapsedS; // Used for converting seconds to HH:MM:SS format
 string	notification; // Used to display important information in the bottom right of the interface
 int		averageWait; // Used to track average wait time
+int		averageCalls[5]; // Tracks the average calls in queue
+int		avgCallCnt = 0; // Used for cyclying through the averageCalls array
+int		avgCallTemp; // Used for calculating average calls in queue
 
 vector<int>		idV; // Stores caller ids
 vector<string>	numberV; // Stores phone numbers
@@ -80,13 +84,15 @@ void mainMenu(void) {
 	case 49: // '1' is pressed - add a new call
 		notification = "Added call ID: " + to_string(idCount) + " to the queue.";
 		push("00000 000000");
-		
+
+		updateAvgCalls();
 		mainMenu();
 		break;
 
 	case 50: // '2' is pressed - push call to operator
 		pop();
 
+		updateAvgCalls();
 		mainMenu();
 		break;
 
@@ -94,18 +100,20 @@ void mainMenu(void) {
 		if (idV.size() != 0) {
 			int rng = rand() % idV.size();
 
-			notification = "Removed call ID: "  + to_string(idV.at(rng)) +  " from the queue (disconnected).";
+			notification = "Removed call ID: " + to_string(idV.at(rng)) + " from the queue (disconnected).";
 
 			idV.erase(idV.begin() + rng);
 			numberV.erase(numberV.begin() + rng);
 			timeV.erase(timeV.begin() + rng);
 		} else { notification = "Error: Cannot remove call (Queue is empty)."; }
 
+		updateAvgCalls();
 		mainMenu();
 		break;
 	case 52: // '4' is pressed - update queue
 		notification = "Updated queue.";
 
+		updateAvgCalls();
 		mainMenu();
 		break;
 
@@ -113,6 +121,7 @@ void mainMenu(void) {
 		break;
 
 	default:
+		updateAvgCalls();
 		mainMenu();
 		break;
 	}
@@ -125,9 +134,9 @@ void drawMenu(void) {
 	// Print Queue
 	for (int i = 0; i < idV.size(); ++i) {
 		formatS(time(NULL) - timeV.at(i));
-		
+
 		textColour(10); cout << "ID: " << idV.at(i);
-		textColour(15); cout <<  " | " << "Number: " << numberV.at(i) << " | ";
+		textColour(15); cout << " | " << "Number: " << numberV.at(i) << " | ";
 		textColour(10); cout << "Time: " << elapsedH << ":" << elapsedM << ":" << elapsedS << endl;
 	}
 
@@ -140,11 +149,13 @@ void drawMenu(void) {
 		averageWait = averageWait / idV.size();
 
 		formatS(averageWait);
-		
+
 		textColour(15); cout << elapsedH << ":" << elapsedM << ":" << elapsedS;
 	} else { textColour(15); cout << "N/A - Queue is empty."; }
 
-	//setLoc
+	// Print average calls in queue
+	textColour(10); setLoc(65, 16); cout << "Average # of calls in Queue: ";
+	cout << avgCallTemp;
 
 	// Print menu options
 	textColour(11); setLoc(65, 5); cout << "Call Centre Application";
@@ -152,9 +163,9 @@ void drawMenu(void) {
 
 	textColour(14); setLoc(65, 8); cout << "[1] Add a new call to the queue";
 	textColour(14); setLoc(65, 9); cout << "[2] Push Oldest Call to Operator";
-	textColour(14); setLoc(65,10); cout << "[3] Disconnect Random Call";
-	textColour(14); setLoc(65,11); cout << "[4] Update Queue";
-	textColour(14); setLoc(65,12); cout << "[5] Quit Application";
+	textColour(14); setLoc(65, 10); cout << "[3] Disconnect Random Call";
+	textColour(14); setLoc(65, 11); cout << "[4] Update Queue";
+	textColour(14); setLoc(65, 12); cout << "[5] Quit Application";
 
 	// Print notification
 	textColour(12);
@@ -194,4 +205,19 @@ void textColour(int colour) {
 	HANDLE  hConsole;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, colour);
+}
+
+// Updates the average calls in queue
+void updateAvgCalls(void) {
+	averageCalls[avgCallCnt] = idV.size();
+
+	for (int i = 0; i < 4; i++) {
+		avgCallTemp += averageCalls[i];
+	}
+
+	avgCallTemp = avgCallTemp / 5;
+
+	// Increment counter + cycle to 0 if end is reached
+	avgCallCnt++;
+	if (avgCallCnt == 5) avgCallCnt = 0;
 }
